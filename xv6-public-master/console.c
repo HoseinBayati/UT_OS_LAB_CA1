@@ -280,7 +280,7 @@ void consoleintr(int (*getc)(void))
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
-        // print_the_rest();
+        print_the_rest();
 
         if (c == '\n' || c == C('D') || input.e == input.r + INPUT_BUF)
         {
