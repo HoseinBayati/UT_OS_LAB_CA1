@@ -282,6 +282,29 @@ void consoleintr(int (*getc)(void))
         consputc(input.line_ahead[--input.line_ahead_size]);
       }
       break;
+    case C('L'):
+      for (int i = 0; i < 25 * 80; i++)
+        crt[i] = ' ' | 0x0700; // Clear the screen
+
+      for (int i = 0; i < 25 * 80; i++) //the size is difference to xv6
+      {
+        uartputc('\b'); // Clear one line of terminal
+        uartputc(' ');
+        uartputc('\b');
+      }
+      uartputc('$');
+
+      // Repositioning the cursor to the top left corner:
+      outb(CRTPORT, 14);
+      outb(CRTPORT + 1, 0);
+      outb(CRTPORT, 15);
+      outb(CRTPORT + 1, 1);
+      input.e = input.w = input.r; // Reset input buffer indices
+      input.line_ahead_size = 0;
+      // Print a dollar sign:
+      crt[0] = '$' | 0x0700;
+      break;
+
     case C('H'):
     case '\x7f': // Backspace
       if (input.e != input.w)
