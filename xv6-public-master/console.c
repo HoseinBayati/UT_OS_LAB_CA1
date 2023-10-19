@@ -202,16 +202,36 @@ struct
 
 #define C(x) ((x) - '@') // Control-x
 
-void print_the_rest()
+void cursor_move_left(int length)
 {
-  for (int i = input.line_ahead_size; i >= 0; i--)
+  for (uint i = 0; i < length; i++)
   {
-    uartputc(input.line_ahead[i]);
-  }
-  for (int i = 0; i < input.line_ahead_size; i++)
-  {
+    int pos;
+    outb(CRTPORT, 14);
+    pos = inb(CRTPORT + 1) << 8;
+    outb(CRTPORT, 15);
+    pos |= inb(CRTPORT + 1);
+
+    if (pos > 0)
+      --pos;
+
+    outb(CRTPORT, 14);
+    outb(CRTPORT + 1, pos >> 8);
+    outb(CRTPORT, 15);
+    outb(CRTPORT + 1, pos);
+
     uartputc('\b');
   }
+}
+
+void print_the_rest()
+{
+  for (int i = input.line_ahead_size - 1; i >= 0; i--)
+  {
+    consputc(input.line_ahead[i]);
+  }
+
+  cursor_move_left(input.line_ahead_size);
 }
 
 void consoleintr(int (*getc)(void))
@@ -241,7 +261,9 @@ void consoleintr(int (*getc)(void))
         input.e--;
         char last_char = input.buf[(input.e) % INPUT_BUF];
         input.line_ahead[input.line_ahead_size++] = last_char;
-        uartputc('\b');
+        cursor_move_left(1);
+
+        print_the_rest();
       }
       break;
     case C('H'):
@@ -258,7 +280,7 @@ void consoleintr(int (*getc)(void))
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
-        print_the_rest();
+        // print_the_rest();
 
         if (c == '\n' || c == C('D') || input.e == input.r + INPUT_BUF)
         {
