@@ -224,8 +224,18 @@ void cursor_move_left(int length)
   }
 }
 
-void print_the_rest()
+void cursor_move_right(int length)
 {
+}
+
+void print_cursor_right_hand() // print the characters that are place on the right of the cursor
+{
+  for (int i = 0; i <= input.e + input.line_ahead_size; i++)
+    uartputc(' ');
+
+  for (int i = 0; i <= input.e + input.line_ahead_size; i++)
+    uartputc('\b');
+
   for (int i = input.line_ahead_size - 1; i >= 0; i--)
   {
     consputc(input.line_ahead[i]);
@@ -263,7 +273,18 @@ void consoleintr(int (*getc)(void))
         input.line_ahead[input.line_ahead_size++] = last_char;
         cursor_move_left(1);
 
-        print_the_rest();
+        print_cursor_right_hand();
+      }
+      break;
+    case C('F'):
+      if (input.e != input.w)
+      {
+        input.e++;
+        char last_char = input.buf[(input.e) % INPUT_BUF];
+        input.line_ahead[input.line_ahead_size++] = last_char;
+        cursor_move_right(1);
+
+        // print_cursor_right_hand();
       }
       break;
     case C('H'):
@@ -272,6 +293,7 @@ void consoleintr(int (*getc)(void))
       {
         input.e--;
         consputc(BACKSPACE);
+        print_cursor_right_hand();
       }
       break;
     default:
@@ -280,7 +302,7 @@ void consoleintr(int (*getc)(void))
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
-        print_the_rest();
+        print_cursor_right_hand();
 
         if (c == '\n' || c == C('D') || input.e == input.r + INPUT_BUF)
         {
