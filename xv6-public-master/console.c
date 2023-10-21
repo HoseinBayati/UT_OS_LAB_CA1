@@ -200,12 +200,6 @@ struct
   uint e; // Edit index
 } input;
 
-#define COMMAND_MEMORY_LENGHT 15
-#define MAX_COMMAND_LENGTH 128
-
-char cmdAry[COMMAND_MEMORY_LENGHT][MAX_COMMAND_LENGTH] = {""};
-uint cmdAryPtr = 0;
-
 #define C(x) ((x) - '@') // Control-x
 
 void cursor_move_left(int length)
@@ -249,11 +243,20 @@ void print_cursor_right_hand(int is_backspace) // print the characters that are 
   cursor_move_left(input.line_ahead_size);
 }
 
+// ARROW UP AND DOWN:
+#define COMMAND_MEMORY_LENGHT 15
+#define MAX_COMMAND_LENGTH 128
+
+char cmdAry[COMMAND_MEMORY_LENGHT][MAX_COMMAND_LENGTH] = {""};
+uint cmdAryPtr = 0;
+uint arrowUpIndex = 0;
+uint arrowDownIndex = -1;
+//------------------------------------------
+
 void consoleintr(int (*getc)(void))
 {
   int c, doprocdump = 0;
   uint charPtr;
-
   acquire(&cons.lock);
   while ((c = getc()) >= 0)
   {
@@ -322,39 +325,61 @@ void consoleintr(int (*getc)(void))
       }
       break;
 
-    //Ctrl+M instead of arrow up
+    // Ctrl+M instead of arrow up
     case C('M'):
-
-      if (cmdAryPtr > 0)
+      if (arrowUpIndex > 0)
       {
         while (input.e != input.w && input.buf[--input.e % INPUT_BUF] != '\n')
         {
           consputc(BACKSPACE);
         }
-        for (uint i = 0; (i < MAX_COMMAND_LENGTH) && cmdAry[cmdAryPtr][i] != '\n'; i++)
+        for (uint i = 0; (i < MAX_COMMAND_LENGTH) && cmdAry[arrowUpIndex][i] != '\n'; i++)
         {
-          input.buf[input.e++ % INPUT_BUF] = cmdAry[cmdAryPtr][i];
-          consputc(cmdAry[cmdAryPtr][i]);
+          input.buf[input.e++ % INPUT_BUF] = cmdAry[arrowUpIndex][i];
+          consputc(cmdAry[arrowUpIndex][i]);
         }
-        cmdAryPtr = cmdAryPtr -1 ;
+        arrowUpIndex = (arrowUpIndex - 1) % COMMAND_MEMORY_LENGHT;
+        arrowDownIndex = arrowUpIndex + 1;
       }
 
+      break;
+    case C('N'):
+      if (arrowDownIndex != -1 && arrowDownIndex < cmdAryPtr)
+      {
+        while (input.e != input.w && input.buf[--input.e % INPUT_BUF] != '\n')
+        {
+          consputc(BACKSPACE);
+        }
+        // Handle Ctrl+N to retrieve next commands.
+        arrowDownIndex = (arrowDownIndex + 1) % COMMAND_MEMORY_LENGHT;
+        for (uint i = 0; (i < MAX_COMMAND_LENGTH) && cmdAry[arrowDownIndex][i] != '\n'; i++)
+        {
+          input.buf[input.e++ % INPUT_BUF] = cmdAry[arrowDownIndex][i];
+          consputc(cmdAry[arrowDownIndex][i]);
+        }
+        arrowUpIndex = arrowDownIndex - 1;
+      }
       break;
     default:
       if (c != 0 && input.e - input.r < INPUT_BUF)
       {
+
+        // Save each command into an array:
         if (c == '\n')
         {
           charPtr = input.e;
-          while (charPtr != input.w && input.buf[--charPtr % INPUT_BUF] != '\n')
-            ;
+          while (charPtr != input.w && input.buf[--charPtr % INPUT_BUF] != '$')
+            ; // find first charachter in a command(charPtr)
+
           cmdAryPtr = (cmdAryPtr + 1) % COMMAND_MEMORY_LENGHT;
           for (uint i = 0; (i < MAX_COMMAND_LENGTH - 1) && ((charPtr + i) < input.e); i++)
           {
             cmdAry[cmdAryPtr][i] = input.buf[(charPtr + i) % INPUT_BUF];
             cmdAry[cmdAryPtr][i + 1] = '\n';
           }
+          arrowUpIndex = cmdAryPtr;
         }
+        //-----------------------------------------------
 
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
