@@ -200,6 +200,12 @@ struct
   uint e; // Edit index
 } input;
 
+#define COMMAND_MEMORY_LENGHT 15
+#define MAX_COMMAND_LENGTH 128
+
+char cmdAry[COMMAND_MEMORY_LENGHT][MAX_COMMAND_LENGTH] = {""};
+uint cmdAryPtr = 0;
+
 #define C(x) ((x) - '@') // Control-x
 
 void cursor_move_left(int length)
@@ -246,6 +252,7 @@ void print_cursor_right_hand(int is_backspace) // print the characters that are 
 void consoleintr(int (*getc)(void))
 {
   int c, doprocdump = 0;
+  uint charPtr;
 
   acquire(&cons.lock);
   while ((c = getc()) >= 0)
@@ -286,7 +293,7 @@ void consoleintr(int (*getc)(void))
       for (int i = 0; i < 25 * 80; i++)
         crt[i] = ' ' | 0x0700; // Clear the screen
 
-      for (int i = 0; i < 25 * 80; i++) //the size is difference to xv6
+      for (int i = 0; i < 25 * 80; i++) // the size is difference to xv6
       {
         uartputc('\b'); // Clear one line of terminal
         uartputc(' ');
@@ -314,9 +321,41 @@ void consoleintr(int (*getc)(void))
         print_cursor_right_hand(1);
       }
       break;
+
+    //Ctrl+M instead of arrow up
+    case C('M'):
+
+      if (cmdAryPtr > 0)
+      {
+        while (input.e != input.w && input.buf[--input.e % INPUT_BUF] != '\n')
+        {
+          consputc(BACKSPACE);
+        }
+        for (uint i = 0; (i < MAX_COMMAND_LENGTH) && cmdAry[cmdAryPtr][i] != '\n'; i++)
+        {
+          input.buf[input.e++ % INPUT_BUF] = cmdAry[cmdAryPtr][i];
+          consputc(cmdAry[cmdAryPtr][i]);
+        }
+        cmdAryPtr = cmdAryPtr -1 ;
+      }
+
+      break;
     default:
       if (c != 0 && input.e - input.r < INPUT_BUF)
       {
+        if (c == '\n')
+        {
+          charPtr = input.e;
+          while (charPtr != input.w && input.buf[--charPtr % INPUT_BUF] != '\n')
+            ;
+          cmdAryPtr = (cmdAryPtr + 1) % COMMAND_MEMORY_LENGHT;
+          for (uint i = 0; (i < MAX_COMMAND_LENGTH - 1) && ((charPtr + i) < input.e); i++)
+          {
+            cmdAry[cmdAryPtr][i] = input.buf[(charPtr + i) % INPUT_BUF];
+            cmdAry[cmdAryPtr][i + 1] = '\n';
+          }
+        }
+
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
