@@ -188,7 +188,7 @@ void iinit(int dev)
           sb.ninodes, sb.nlog, sb.logstart, sb.inodestart,
           sb.bmapstart);
 
-  cprintf("\n\n- Hosein   Bayati    : 810198366\n- Amirreza Kaffashan : 810899064\n- Hosein   Norouzi   : ... \n\n");
+  cprintf("\n\n- Hosein   Bayati    : 810198366\n- Amirreza Kaffashan : 810899064\n- Hossein  Noroozi   : 810899073 \n\n");
 }
 
 static struct inode *iget(uint dev, uint inum);
